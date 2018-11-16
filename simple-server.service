@@ -1,0 +1,13 @@
+[Unit]
+Description=SimpleServer
+After=network-online.target
+ 
+[Service]
+Type=forking
+Restart=always
+RestartSec=30
+UMask=022
+ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/server.py
+ 
+[Install]
+WantedBy=multi-user.target
