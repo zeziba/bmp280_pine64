@@ -1,0 +1,14 @@
+[Unit]
+Description=BMP180
+After=network-online.target network.target
+
+[Service]
+Type=forking
+Restart=on-failure
+RestartSec=5
+PIDFile=/var/run/bmp180.pid
+UMask=022
+ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/main.py
+
+[Install]
+WantedBy=multi-user.target
