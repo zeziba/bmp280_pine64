@@ -18,3 +18,7 @@ The program is able to run by overriding he Adafruit I2C library
 and forcing the program to return the correct setting for the
 BMP280 library to use. Once this is done the device is able
 to communicate correctly.
+
+
+Import links for Pine64:
+http://joey.hazlett.us/pine64/pine64_pins.html
