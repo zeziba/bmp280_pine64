@@ -1,99 +1,146 @@
-import sys
+#!/usr/bin/env python3
+
+import atexit
 import os
-from datetime import datetime
+import sys
+import time
 from os.path import join
+from signal import signal, SIGTERM
 
-from Adafruit_BME280 import *
+sys.path.append('/home/ubuntu/pybmp180/pyscript')
+
+import _main as m
 
 
-class Timer:
-    def __init__(self, interval):
-        self.interval = interval
-        self.time = None
+__base__ = '/var/run'
+
+
+class Daemon:
+    """
+    A generic daemon class.
+    Usage: subclass the Daemon class and override the run() method
+    """
+
+    def __init__(self, pidfile=join(__base__, 'bmp180.pid')):
+        self.pidfile = pidfile
+
+    def daemonize(self):
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # exit first parent
+                sys.exit(0)
+        except OSError as e:
+            sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.exit(1)
+
+        # decouple from parent environment
+        os.setsid()
+        os.umask(0)
+
+        # do second fork
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # exit from second parent
+                sys.exit(0)
+        except OSError as e:
+            sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.exit(1)
+
+        atexit.register(self.onstop)
+        signal(SIGTERM, lambda signum, stack_frame: exit())
+
+        # write pidfile
+        pid = str(os.getpid())
+        open(self.pidfile, 'w+').write("%s\n" % pid)
+
+    def onstop(self):
+        self.quit()
+        os.remove(self.pidfile)
 
     def start(self):
-        self.time = datetime.now()
+        """
+        Start the daemon
+        """
+        # Check for a pidfile to see if the daemon already runs
+        try:
+            pf = open(self.pidfile, 'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
+
+        if pid:
+            message = "pidfile %s already exist. Daemon already running?\nPID:{}\n".format(pid)
+            sys.stderr.write(message % self.pidfile)
+            sys.exit(1)
+
+        # Start the daemon
+        self.daemonize()
+        self.run()
 
     def stop(self):
-        self.start = None
+        """
+        Stop the daemon
+        """
+        # Get the pid from the pidfile
+        try:
+            pf = open(self.pidfile, 'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
 
-    @property
-    def check(self):
-        return (datetime.now() - self.time).total_seconds()
+        if not pid:
+            message = "pidfile %s does not exist. Daemon not running?\n"
+            sys.stderr.write(message % self.pidfile)
+            return  # not an error in a restart
 
-    @property
-    def tdelta(self):
-        return self.interval
+        # Try killing the daemon process
+        try:
+            while 1:
+                os.kill(pid, SIGTERM)
+                time.sleep(0.1)
+        except OSError as err:
+            err = str(err)
+            if err.find("No such process") > 0:
+                if os.path.exists(self.pidfile):
+                    os.remove(self.pidfile)
+            else:
+                print(str(err))
+                sys.exit(1)
 
-    def __sub__(self, other):
-        return (self.time - other.time)
+    def restart(self):
+        """
+        Restart the daemon
+        """
+        self.stop()
+        self.start()
 
-    def __add__(self, other):
-        return (self.time + other.time)
+    def run(self):
+        """
+        Should be override, is run after the class is dameonized
+        :return:
+        """
+        pass
 
-    def __str__(self):
-        if self.time is not None:
-            return str((datetime.now() - self.time).total_seconds())
-        else:
-            return "None"
+    def quit(self):
+        """
+        Should be overridden, is used to quit the daemon
+        :return:
+        """
+        pass
 
 
-def main():
-    timers = {
-        "bme280": Timer(1),
-    }
+class BMP180(Daemon):
+    def run(self):
+        self.server = m
+        self.server.main()
 
-    _file_name = "data"
-    header = "degree, df, pascals, hectopascals, humidity\n"
-    _out = "{},{},{},{},{}\n"
+    def quit(self):
+        self.server.signal_watch.kill = True
 
-    # Have to override the get_default_bus for the Adafruit.GPIO.I2C
-    # The Pine64 uses the secondary bus so it needs to return 1, if different change this return value
-    import Adafruit_GPIO.I2C as I2C
 
-    def get_default_bus():
-        return 1
-
-    I2C.get_default_bus = get_default_bus
-
-    def get_sensor():
-        return BME280(t_mode=BME280_OSAMPLE_8, p_mode=BME280_OSAMPLE_8, h_mode=BME280_OSAMPLE_8, address=0x76)
-
-    try:
-        sensor = get_sensor()
-    except OSError as oserr:
-        sys.exit(-1)
-    except RuntimeError as runerr:
-        sys.exit(-2)
-
-    def gather_data():
-        degrees = sensor.read_temperature()
-        df = sensor.read_temperature_f()
-        pascals = sensor.read_pressure()
-        hectopascals = pascals / 100
-        humidity = sensor.read_humidity()
-        return degrees, df, pascals, hectopascals, humidity
-
-    out = {
-        "tempc": 'Temp      = {0:0.3f} deg C',
-        "tempf": 'Temp      = {0:0.3f} deg F',
-        "pressure": 'Pressure  = {0:0.2f} hPa',
-        "humidity": 'Humidity  = {0:0.2f} %'
-    }
-
-    for timer in timers.values():
-        timer.start()
-
-    try:
-        _file = join(os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0],
-                     "data", "{}_{}.csv".format(_file_name, datetime.now().strftime("%Y-%m-%d_%H_%M_%S")))
-        with open(_file, "w+") as file:
-            file.write(header)
-            while True:
-                if timers["bme280"].check > timers["bme280"].tdelta:
-                    timers["bme280"].start()
-                    file.write(_out.format(*gather_data()))
-                    file.flush()
-    except FileNotFoundError as err:
-        print(err)
-
+_daemon = BMP180()
+_daemon.start()
