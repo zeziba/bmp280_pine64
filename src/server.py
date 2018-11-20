@@ -22,7 +22,7 @@ class CORSRequestHandler (SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.do_OPTIONS()
-        SimpleHTTPRequestHandler.end_headers(self)
+        super().end_headers()
 
 
 httpd = socketserver.TCPServer((address, port), CORSRequestHandler)
