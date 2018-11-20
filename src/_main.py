@@ -60,6 +60,11 @@ def main():
 
     _file_name = "data"
     header = "Time(date), degree, df, pascals, hectopascals, humidity\n"
+    # Final size of the output averages 111 bytes per line
+    # At roughly 1 second per reading that gives
+    #   9,009,009 readings per gb
+    #   2,502 hours per gb
+    #   104 days per gb
     _out = "{},{},{},{},{},{}\n"
 
     # Have to override the get_default_bus for the Adafruit.GPIO.I2C
