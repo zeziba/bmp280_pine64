@@ -1,10 +1,32 @@
 import os
 import socketserver
+import signal
+import threading
+import sys
 from http.server import SimpleHTTPRequestHandler
 
-os.chdir('/home/ubuntu/pybmp180/pyscript')
+try:
+    os.chdir('/home/ubuntu/pybmp180/pyscript/data')
+except NotADirectoryError:
+    os.makedirs('/home/ubuntu/pybmp180/pyscript/data')
+finally:
+    os.chdir('/home/ubuntu/pybmp180/pyscript/data')
 address = ''
 port = 8000
+
+
+class SignalWatch:
+    kill = False
+
+    def __init__(self):
+        signal.signal(signal.SIGINT, self._exit)
+        signal.signal(signal.SIGTERM, self._exit)
+
+    def _exit(self, signum, frame):
+        self.kill = True
+
+
+signal_watch = SignalWatch()
 
 
 class CORSRequestHandler (SimpleHTTPRequestHandler):
@@ -25,6 +47,24 @@ class CORSRequestHandler (SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+class TCPServer(socketserver.TCPServer):
+    def run(self):
+        try:
+            self.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.server_close()
+
+
 def main():
-    httpd = socketserver.TCPServer((address, port), CORSRequestHandler)
-    httpd.serve_forever()
+
+    server = TCPServer((address, port), CORSRequestHandler)
+    thread = threading.Thread(None, server.run)
+
+    thread.start()
+
+    while True:
+        if signal_watch.kill:
+            sys.exit(0)
+        pass
