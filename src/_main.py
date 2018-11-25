@@ -3,6 +3,7 @@
 import signal
 import sys
 from datetime import datetime
+from time import sleep
 import database
 
 from Adafruit_BME280 import *
@@ -105,16 +106,22 @@ def main():
     try:
         global signal_watch
 
-        while not signal_watch.kill:
-            if DEBUG:
-                data = gather_data()
-                print(out['tempc'].format(data[1]))
-                print(out['tempf'].format(data[2]))
-                print(out['pressure'].format(data[4]))
-                print(out['humidity'].format(data[5]))
-            else:
-                with database.DatabaseManager() as _db:
-                    _db.add_data(timers["bme280"].time.strftime("%Y-%m-%d %H:%M:%S"), *gather_data())
+        with database.DatabaseManager() as _db:
+            while not signal_watch.kill:
+                if DEBUG:
+                    data = gather_data()
+                    print(out['tempc'].format(data[1]))
+                    print(out['tempf'].format(data[2]))
+                    print(out['pressure'].format(data[4]))
+                    print(out['humidity'].format(data[5]))
+                else:
+                    if timers["bme280"].check > timers["bme280"].tdelta:
+                        _db.add_data(timers["bme280"].time.strftime("%Y-%m-%d %H:%M:%S"), *gather_data())
+                        _db.commit()
+                        timers["bme280"].start()
+
+                    if _wait:
+                        sleep(1)
     except FileNotFoundError as err:
         print(err)
 
