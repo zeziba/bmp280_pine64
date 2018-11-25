@@ -1,11 +1,14 @@
-import os
+#!/usr/bin/env python3
+
 import signal
 import sys
 from datetime import datetime
-from os.path import join
-from time import sleep
+import database
 
 from Adafruit_BME280 import *
+
+
+DEBUG = False
 
 
 class SignalWatch:
@@ -50,6 +53,7 @@ class Timer:
         else:
             return "None"
 
+
 signal_watch = SignalWatch()
 
 
@@ -59,13 +63,6 @@ def main():
     }
 
     _file_name = "data"
-    header = "Time(date), degree, df, pascals, hectopascals, humidity\n"
-    # Final size of the output averages 111 bytes per line
-    # At roughly 1 second per reading that gives
-    #   9,009,009 readings per gb
-    #   2,502 hours per gb
-    #   104 days per gb
-    _out = "{},{},{},{},{},{}\n"
 
     # Have to override the get_default_bus for the Adafruit.GPIO.I2C
     # The Pine64 uses the secondary bus so it needs to return 1, if different change this return value
@@ -81,9 +78,9 @@ def main():
 
     try:
         sensor = get_sensor()
-    except OSError as oserr:
+    except OSError:
         sys.exit(-1)
-    except RuntimeError as runerr:
+    except RuntimeError:
         sys.exit(-2)
 
     def gather_data():
@@ -107,18 +104,31 @@ def main():
     _wait = True
     try:
         global signal_watch
-        _file = join(os.path.split(os.path.abspath(os.path.realpath(sys.argv[0])))[0],
-                     "data", "{}_{}.csv".format(_file_name, datetime.now().strftime("%Y-%m-%d_%H_%M_%S")))
-        with open(_file, "w+") as file:
-            file.write(header)
-            while not signal_watch.kill:
-                if timers["bme280"].check > timers["bme280"].tdelta:
-                    timers["bme280"].start()
-                    file.write(_out.format(timers["bme280"].time.strftime("%Y-%m-%d %H:%M:%S"), *gather_data()))
-                    file.flush()
-                if _wait:
-                    sleep(1)
-                    _wait = False
+
+        while not signal_watch.kill:
+            if DEBUG:
+                data = gather_data()
+                print(out['tempc'].format(data[1]))
+                print(out['tempf'].format(data[2]))
+                print(out['pressure'].format(data[4]))
+                print(out['humidity'].format(data[5]))
+            else:
+                with database.DatabaseManager() as _db:
+                    _db.add_data(*gather_data())
     except FileNotFoundError as err:
         print(err)
+
+
+if __name__ == "__main__":
+
+    with database.DatabaseManager() as db:
+        dt = "2018-11-24 07:48:54"
+        c = '22.755369503429392'
+        f = '72.9596651061729'
+        p = '84456.90144499036'
+        hp = '844.5690144499036'
+        h = '21.803302389095357'
+
+        db.add_data(dt, c, f, p, hp, h)
+        print(db)
 
