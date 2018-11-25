@@ -22,3 +22,7 @@ to communicate correctly.
 
 Import links for Pine64:
 http://joey.hazlett.us/pine64/pine64_pins.html
+
+An example link for the database would be as follows
+
+http://10.0.0.100:8000/data.sqlite
