@@ -114,7 +114,7 @@ def main():
                 print(out['humidity'].format(data[5]))
             else:
                 with database.DatabaseManager() as _db:
-                    _db.add_data(*gather_data())
+                    _db.add_data(timers["bme280"].time.strftime("%Y-%m-%d %H:%M:%S"), *gather_data())
     except FileNotFoundError as err:
         print(err)
 
