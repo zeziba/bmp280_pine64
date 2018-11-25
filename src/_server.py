@@ -3,7 +3,7 @@ import socketserver
 import signal
 import threading
 import sys
-from http.server import SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 
 try:
     os.chdir('/home/ubuntu/pybmp180/pyscript/data')
@@ -47,7 +47,7 @@ class CORSRequestHandler (SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-class TCPServer(socketserver.TCPServer):
+class TCPServer(HTTPServer):
     def run(self):
         try:
             self.serve_forever()
