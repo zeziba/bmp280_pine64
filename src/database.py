@@ -58,7 +58,6 @@ class DatabaseManager:
     def _insert_many(self, timeout=2):
         c = self.database.cursor()
         cmd = _insert_cmd_.format(_table_name_, *_inserts_)
-        print(cmd)
         for _ in range(timeout * 10):
             try:
                 c.executemany(cmd, self.command_list)
