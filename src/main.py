@@ -140,6 +140,21 @@ class BMP180(Daemon):
     def quit(self):
         self.server.signal_watch.kill = True
 
+    def backup(self):
+        self.server.backup = True
 
-_daemon = BMP180()
-_daemon.start()
+
+def main():
+    _daemon = BMP180()
+    if sys.argv == "start":
+        _daemon.start()
+    elif sys.argv == "stop":
+        _daemon.quit()
+    elif sys.argv == "backup":
+        _daemon.backup()
+    else:
+        print("Usage: start | stop | update")
+
+
+if __name__== "__main__":
+    main()
