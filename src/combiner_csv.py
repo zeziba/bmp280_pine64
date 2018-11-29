@@ -6,10 +6,11 @@ import database
 import csv
 import os
 
-_path_ = '/home/ubuntu/pybmp180/pyscript/data'
+#_path_ = '/home/ubuntu/pybmp180/pyscript/data'
+_path_ = 'data'
 
 
-with database.DatabaseManager() as db:
+with database.DatabaseManager('data') as db:
     for file in os.listdir(_path_):
         if 'csv' in file:
             _p = os.path.join(_path_, file)
@@ -19,4 +20,6 @@ with database.DatabaseManager() as db:
                 for line in dr:
                     db.add_data(line['Time(date)'], line[' degree'], line[' df'],
                                 line[' pascals'], line[' hectopascals'], line[' humidity'])
+                    if len(db) > 500:
+                        db.commit()
             db.commit()
