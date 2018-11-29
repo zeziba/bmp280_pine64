@@ -8,6 +8,7 @@ from time import sleep
 _path_ = '/home/ubuntu/pybmp180/pyscript/data'
 # _path_ = 'data'
 _sqlname_ = 'data.sqlite'
+_backup_ = "backup.sqlite"
 
 _insert_cmd_ = "INSERT INTO {0}('{1}', '{2}', '{3}', '{4}', '{5}', '{6}') VALUES(?, ?, ?, ?, ?, ?)"
 _inserts_ = ["TIMESTAMP", "Celsius", "Fahrenheit", "Pascals", "Hecto-Pascals", "Humidity"]
@@ -36,15 +37,23 @@ except Exception as error:
     print(Exception)
 
 
+def progress(status, remaining, total):
+    print(f'Copied {total-remaining} of {total} pages...')
+
+
 class DatabaseManager:
     def __init__(self, path=_path_):
         self.path = path
         self.database = None
         self.command_list = []
         self.is_alive = False
+        self._backup = False
 
     def __enter__(self):
         self.open(database=self.path)
+        if self._backup:
+            self.__backup()
+            self.backup = False
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -108,6 +117,24 @@ class DatabaseManager:
         _data = sorted(c.fetchall())
         while _data:
             yield _data.pop()
+
+    @property
+    def backup(self):
+        return self._backup
+
+    @backup.setter
+    def backup(self, state):
+        assert state is bool
+        self._backup = state
+
+    def __backup(self):
+        if not self.is_alive:
+            with self as db:
+                with sqlite3.connect(join(_path_, _backup_)) as _conn:
+                    db.database.backup(_conn, pages=1, progress=progress)
+        else:
+            with sqlite3.connect(join(_path_, _backup_)) as _conn:
+                self.database.backup(_conn, pages=1, progress=progress)
 
     def __len__(self):
         return len(self.command_list)
