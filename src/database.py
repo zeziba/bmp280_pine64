@@ -47,13 +47,9 @@ class DatabaseManager:
         self.database = None
         self.command_list = []
         self.is_alive = False
-        self._backup = False
 
     def __enter__(self):
         self.open(database=self.path)
-        if self._backup:
-            self.BACKUP()
-            self.backup = False
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -117,16 +113,6 @@ class DatabaseManager:
         _data = sorted(c.fetchall())
         while _data:
             yield _data.pop()
-
-    @property
-    def backup(self):
-        return self._backup
-
-    @backup.setter
-    def backup(self, state):
-        if type(state) is not bool:
-            return
-        self._backup = state
 
     def BACKUP(self):
         with sqlite3.connect(join(_path_, _backup_)) as _conn:
