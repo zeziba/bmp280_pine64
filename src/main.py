@@ -9,7 +9,7 @@ from signal import signal, SIGTERM
 
 sys.path.append('/home/ubuntu/pybmp180/pyscript')
 
-from src import _main as m
+import _main as m
 
 __base__ = '/var/run'
 
@@ -135,26 +135,29 @@ class Daemon:
 class BMP180(Daemon):
     def run(self):
         self.server = m
+        self.signal_watch = m.signal_watch
+        self.BACKUP = m.BACKUP
         self.server.main()
 
     def quit(self):
-        self.server.signal_watch.kill = True
-
-    def backup(self):
-        self.server.backup = True
+        self.signal_watch.kill = True
 
 
 def main():
     _daemon = BMP180()
-    if sys.argv == "start":
-        _daemon.start()
-    elif sys.argv == "stop":
-        _daemon.quit()
-    elif sys.argv == "backup":
-        _daemon.backup()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "start":
+            _daemon.start()
+            _daemon.backup()
+        elif sys.argv[1] == "stop":
+            _daemon.quit()
+        elif sys.argv[1] == "backup":
+            import database
+            with database.DatabaseManager() as db:
+                db.BACKUP()
     else:
-        print("Usage: start | stop | update")
+        print("Usage: start | stop | backup")
 
 
-if __name__== "__main__":
+if __name__ == "__main__":
     main()
