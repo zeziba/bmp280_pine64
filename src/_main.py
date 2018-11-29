@@ -10,6 +10,7 @@ from Adafruit_BME280 import *
 
 
 DEBUG = False
+BACKUP = False
 
 
 class SignalWatch:
@@ -105,6 +106,7 @@ def main():
     _wait = True
     try:
         global signal_watch
+        global BACKUP
 
         with database.DatabaseManager() as _db:
             while not signal_watch.kill:
