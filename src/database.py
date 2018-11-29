@@ -38,7 +38,7 @@ except Exception as error:
 
 
 def progress(status, remaining, total):
-    print(f'Copied {total-remaining} of {total} pages...')
+    print('Copied {} of {} pages...'.format(remaining - total, total))
 
 
 class DatabaseManager:
@@ -52,7 +52,7 @@ class DatabaseManager:
     def __enter__(self):
         self.open(database=self.path)
         if self._backup:
-            self.__backup()
+            self.BACKUP()
             self.backup = False
         return self
 
@@ -124,17 +124,13 @@ class DatabaseManager:
 
     @backup.setter
     def backup(self, state):
-        assert state is bool
+        if type(state) is not bool:
+            return
         self._backup = state
 
-    def __backup(self):
-        if not self.is_alive:
-            with self as db:
-                with sqlite3.connect(join(_path_, _backup_)) as _conn:
-                    db.database.backup(_conn, pages=1, progress=progress)
-        else:
-            with sqlite3.connect(join(_path_, _backup_)) as _conn:
-                self.database.backup(_conn, pages=1, progress=progress)
+    def BACKUP(self):
+        with sqlite3.connect(join(_path_, _backup_)) as _conn:
+            self.database.backup(_conn, pages=1, progress=progress)
 
     def __len__(self):
         return len(self.command_list)
