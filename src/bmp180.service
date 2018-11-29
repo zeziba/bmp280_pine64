@@ -8,7 +8,8 @@ Restart=on-failure
 RestartSec=5
 PIDFile=/var/run/bmp180.pid
 UMask=022
-ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/main.py
+ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/main.py start
+ExecStop=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/main.py stop
 
 [Install]
 WantedBy=multi-user.target
