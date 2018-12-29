@@ -7,7 +7,7 @@ Type=forking
 Restart=always
 RestartSec=30
 UMask=022
-ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/server.py
+ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/server.py start
  
 [Install]
 WantedBy=multi-user.target
