@@ -8,8 +8,7 @@ import database
 
 from Adafruit_BME280 import *
 
-
-DEBUG = False
+DEBUG = True
 BACKUP = False
 
 
@@ -61,7 +60,7 @@ signal_watch = SignalWatch()
 
 def main():
     timers = {
-        "bme280": Timer(1),
+        "bme280": Timer(180),
     }
 
     _file_name = "data"
@@ -110,26 +109,31 @@ def main():
 
         with database.DatabaseManager() as _db:
             while not signal_watch.kill:
-                if DEBUG:
-                    data = gather_data()
-                    print(out['tempc'].format(data[1]))
-                    print(out['tempf'].format(data[2]))
-                    print(out['pressure'].format(data[4]))
-                    print(out['humidity'].format(data[5]))
-                else:
-                    if timers["bme280"].check > timers["bme280"].tdelta:
+                if timers["bme280"].check > timers["bme280"].tdelta:
+                    if DEBUG:
+                        data = gather_data()
+                        print(data)
+                        print(out['tempc'].format(data[0]))
+                        print(out['tempf'].format(data[1]))
+                        print(out['pressure'].format(data[2]))
+                        print(out['humidity'].format(data[4]))
+                    else:
                         _db.add_data(timers["bme280"].time.strftime("%Y-%m-%d %H:%M:%S"), *gather_data())
                         _db.commit()
-                        timers["bme280"].start()
 
-                    if _wait:
-                        sleep(1)
+                    timers["bme280"].start()
+
+                if _wait:
+                    sleep(1)
+                    _db.backup = BACKUP
+
+                if _db.backup:
+                    _db.BACKUP()
     except FileNotFoundError as err:
         print(err)
 
 
 if __name__ == "__main__":
-
     with database.DatabaseManager() as db:
         dt = "2018-11-24 07:48:54"
         c = '22.755369503429392'
