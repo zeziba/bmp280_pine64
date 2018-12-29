@@ -141,5 +141,23 @@ class Server(Daemon):
         self.server.signal_watch.kill = True
 
 
-_daemon = Server()
-_daemon.start()
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) > 1:
+        _daemon = Server()
+        if sys.argv[1] == "start":
+            _daemon.start()
+        elif sys.argv[1] == "stop":
+            print("Gremlins captured the stop function!")
+            _daemon.stop()
+        elif sys.argv[1] == "reset":
+            _daemon.stop()
+            import os
+
+            try:
+                os.remove(_daemon.pidfile)
+            except FileNotExists:
+                pass
+    else:
+        print("Usage: start | stop | reset")
