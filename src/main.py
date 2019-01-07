@@ -64,6 +64,7 @@ class Daemon:
         """
         # Check for a pidfile to see if the daemon already runs
         try:
+            print(self.pidfile)
             pf = open(self.pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
@@ -133,6 +134,11 @@ class Daemon:
 
 
 class BMP180(Daemon):
+    def __init__(self, pid=join(__base__, "bmp180.service")):
+        super().__init__(pid)
+        self.signal_watch = m.signal_watch
+
+
     def run(self):
         self.server = m
         self.signal_watch = m.signal_watch
