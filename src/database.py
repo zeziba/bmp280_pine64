@@ -47,9 +47,13 @@ class DatabaseManager:
         self.database = None
         self.command_list = []
         self.is_alive = False
+        self._backup = False
 
     def __enter__(self):
         self.open(database=self.path)
+        if self._backup:
+            self.BACKUP()
+            self.backup = False
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -114,6 +118,16 @@ class DatabaseManager:
         while _data:
             yield _data.pop()
 
+    @property
+    def backup(self):
+        return self._backup
+
+    @backup.setter
+    def backup(self, state):
+        if type(state) is not bool:
+            return
+        self._backup = state
+
     def BACKUP(self):
         with sqlite3.connect(join(_path_, _backup_)) as _conn:
             self.database.backup(_conn, pages=1, progress=progress)
@@ -149,3 +163,4 @@ if __name__ == "__main__":
             print("The database was {} created".format("successfully" if status else "was not"))
         except sqlite3.OperationalError:
             pass
+
