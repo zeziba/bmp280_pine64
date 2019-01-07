@@ -1,13 +1,17 @@
 [Unit]
-Description=SimpleServer
-After=network-online.target
- 
+Description=BMP180
+After=network-online.target network.target
+
 [Service]
 Type=forking
-Restart=always
-RestartSec=30
+Restart=on-failure
+RestartSec=aways
+RuntimeMaxSec=86400
+PIDFile=/var/run/bmp180.pid
 UMask=022
-ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/server.py start
- 
+ExecStart=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/main.py start
+ExecStop=/usr/bin/python3 /home/ubuntu/pybmp180/pyscript/main.py stop
+
 [Install]
 WantedBy=multi-user.target
+

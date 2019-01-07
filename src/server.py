@@ -141,9 +141,9 @@ class Server(Daemon):
         self.server.signal_watch.kill = True
 
 
+
 if __name__ == "__main__":
     import sys
-
     if len(sys.argv) > 1:
         _daemon = Server()
         if sys.argv[1] == "start":
@@ -154,10 +154,9 @@ if __name__ == "__main__":
         elif sys.argv[1] == "reset":
             _daemon.stop()
             import os
-
             try:
                 os.remove(_daemon.pidfile)
-            except FileNotExists:
+            except FileNotFoundError:
                 pass
     else:
         print("Usage: start | stop | reset")

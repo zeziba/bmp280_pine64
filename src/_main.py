@@ -8,7 +8,7 @@ import database
 
 from Adafruit_BME280 import *
 
-DEBUG = False
+DEBUG = True
 BACKUP = False
 
 
@@ -144,4 +144,5 @@ if __name__ == "__main__":
 
         db.add_data(dt, c, f, p, hp, h)
         print(db)
+
 
