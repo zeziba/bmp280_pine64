@@ -4,12 +4,7 @@ import threading
 import sys
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 
-try:
-    os.chdir('/home/ubuntu/pybmp180/pyscript/data')
-except NotADirectoryError:
-    os.makedirs('/home/ubuntu/pybmp180/pyscript/data')
-finally:
-    os.chdir('/home/ubuntu/pybmp180/pyscript/data')
+
 address = ''
 port = 8000
 
@@ -57,6 +52,12 @@ class TCPServer(HTTPServer):
 
 
 def main():
+    try:
+        os.chdir('/home/ubuntu/pybmp180/pyscript/data')
+    except NotADirectoryError:
+        os.makedirs('/home/ubuntu/pybmp180/pyscript/data')
+    finally:
+        os.chdir('/home/ubuntu/pybmp180/pyscript/data')
 
     server = TCPServer((address, port), CORSRequestHandler)
     thread = threading.Thread(None, server.run)
