@@ -8,7 +8,7 @@ import database
 
 from Adafruit_BME280 import *
 
-DEBUG = True
+DEBUG = False
 BACKUP = False
 
 
