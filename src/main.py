@@ -78,7 +78,8 @@ class Daemon:
 
         atexit.register(self.remove_pidfile)
         pid = str(os.getpid())
-        open(self.pid_file, "w+").write("{}\n".format(pid))
+        with open(self.pid_file, "w+") as f:
+            f.write("{}\n".format(pid))
 
     def remove_pidfile(self):
         if os.path.exists(self.pid_file):
@@ -98,8 +99,9 @@ class Daemon:
                 self.__sys_exit__("pidfile {} already exists. Daemon already running!\n".format(self.pid_file))
             finally:
                 self.remove_pidfile()
-                self.__sys_exit__(
-                    "pidfile {} already exists. Daemon not running, deleting pid.\n".format(self.pid_file))
+                sys.stdout.write("pidfile {} already exists. Daemon not running, deleting pid.\n".format(self.pid_file))
+
+        sys.stdout.write("Starting processes")
 
         self.daemonize()
         self.run()
