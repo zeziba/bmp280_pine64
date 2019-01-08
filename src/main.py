@@ -16,137 +16,136 @@ __base__ = '/var/run'
 
 class Daemon:
     """
-    A generic daemon class.
-    Usage: subclass the Daemon class and override the run() method
+    Pass me something...
     """
 
-    def __init__(self, pidfile=join(__base__, 'bmp180.pid')):
-        self.pidfile = pidfile
+    def __init__(self, pidfile, stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
+        self.stderr = stderr
+        self.stdout = stdout
+        self.stdin = stdin
+        self.pid_file = pidfile
+
+    def __sys_exit__(self, msg):
+        sys.stderr.write(msg)
+        sys.exit(1)
 
     def daemonize(self):
+        """
+        do the UNIX double-fork magic, see Stevens' "Advanced
+        Programming in the UNIX Environment" for details (ISBN 0201563177)
+        http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
+        """
         try:
             pid = os.fork()
             if pid > 0:
-                # exit first parent
                 sys.exit(0)
         except OSError as e:
-            sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
-            sys.exit(1)
+            self.__sys_exit__("fork: #1 failed: {} {}".format(e.errno, e.strerror))
 
-        # decouple from parent environment
+        os.chdir("/")
         os.setsid()
         os.umask(0)
 
-        # do second fork
         try:
             pid = os.fork()
             if pid > 0:
-                # exit from second parent
                 sys.exit(0)
         except OSError as e:
-            sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
-            sys.exit(1)
+            self.__sys_exit__("fork: #2 failed: {} {}".format(e.errno, e.strerror))
 
-        atexit.register(self.onstop)
-        signal(SIGTERM, lambda signum, stack_frame: exit())
+        sys.stdout.flush()
+        sys.stderr.flush()
 
-        # write pidfile
+        if not os.path.exists(self.stdin):
+            with open(self.stdin, "w+") as stdin:
+                pass
+
+        if not os.path.exists(self.stdin):
+            with open(self.stdout, "w+") as stdout:
+                pass
+
+        if not os.path.exists(self.stderr):
+            with open(self.stderr, "w+") as stderr:
+                pass
+
+        si = open(self.stdin, "r")
+        so = open(self.stdout, "a+")
+        se = open(self.stderr, "a+")
+
+        os.dup2(si.fileno(), sys.stdin.fileno())
+        os.dup2(so.fileno(), sys.stdout.fileno())
+        os.dup2(se.fileno(), sys.stderr.fileno())
+
+        atexit.register(self.remove_pidfile)
         pid = str(os.getpid())
-        open(self.pidfile, 'w+').write("%s\n" % pid)
+        open(self.pid_file, "w+").write("{}\n".format(pid))
 
-    def onstop(self):
-        self.quit()
-        os.remove(self.pidfile)
+    def remove_pidfile(self):
+        if os.path.exists(self.pid_file):
+            os.remove(self.pid_file)
 
     def start(self):
-        """
-        Start the daemon
-        """
-        # Check for a pidfile to see if the daemon already runs
         try:
-            print(self.pidfile)
-            pf = open(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            with open(self.pid_file, "r") as pidfile:
+                pid = int(pidfile.read().strip())
         except IOError:
             pid = None
 
         if pid:
-            message = "pidfile %s already exist. Daemon already running?\nPID:{}\n".format(pid)
-            sys.stderr.write(message % self.pidfile)
-            sys.exit(1)
+            try:
+                os.kill(self.pid_file, 0)  # Checks if a process is running under the pid
+            except OSError:
+                self.__sys_exit__("pidfile {} already exists. Daemon already running!\n".format(self.pid_file))
+            finally:
+                self.remove_pidfile()
+                self.__sys_exit__(
+                    "pidfile {} already exists. Daemon not running, deleting pid.\n".format(self.pid_file))
 
-        # Start the daemon
         self.daemonize()
         self.run()
 
     def stop(self):
-        """
-        Stop the daemon
-        """
-        # Get the pid from the pidfile
         try:
-            pf = open(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            with open(self.pid_file, "r") as pidfile:
+                pid = int(pidfile.read().strip())
         except IOError:
             pid = None
 
         if not pid:
-            message = "pidfile %s does not exist. Daemon not running?\n"
-            sys.stderr.write(message % self.pidfile)
-            return  # not an error in a restart
+            sys.stderr.write("pidfile {} does not exist. Daemon not running?\n".format(self.pid_file))
+            return
 
-        # Try killing the daemon process
+        self.remove_pidfile()
+        time.sleep(2)
+
         try:
-            while 1:
+            while True:
                 os.kill(pid, SIGTERM)
-                time.sleep(0.1)
+                time.sleep(1)
         except OSError as err:
             err = str(err)
-            if err.find("No such process") > 0:
-                if os.path.exists(self.pidfile):
-                    os.remove(self.pidfile)
-            else:
-                print(str(err))
-                sys.exit(1)
+            if err.find('No such process') > 0:
+                self.__sys_exit__("{}\n".format(err))
 
     def restart(self):
-        """
-        Restart the daemon
-        """
         self.stop()
         self.start()
 
     def run(self):
-        """
-        Should be override, is run after the class is dameonized
-        :return:
-        """
-        pass
-
-    def quit(self):
-        """
-        Should be overridden, is used to quit the daemon
-        :return:
-        """
         pass
 
 
 class BMP180(Daemon):
-    def __init__(self, pid=join(__base__, "bmp180.service")):
-        super().__init__(pid)
-        self.signal_watch = m.signal_watch
-
+    def __init__(self, pid=join(__base__, "bmp180.service"),
+                 stdin="/home/ubuntu/bmpin", stdout="/home/ubuntu/bmpout", stderr="/home/ubuntu/bmperr"):
+        super().__init__(pid, stdin, stdout, stderr)
+        self.server = m
 
     def run(self):
-        self.server = m
-        self.signal_watch = m.signal_watch
-        self.BACKUP = m.BACKUP
         self.server.main()
 
     def quit(self):
-        self.signal_watch.kill = True
+        self.server.signal_watch.kill = True
 
 
 def main():
@@ -154,15 +153,22 @@ def main():
     if len(sys.argv) > 1:
         if sys.argv[1] == "start":
             _daemon.start()
-            _daemon.backup()
         elif sys.argv[1] == "stop":
             _daemon.quit()
+            time.sleep(0.5)
+            _daemon.stop()
         elif sys.argv[1] == "backup":
             import database
             with database.DatabaseManager() as db:
                 db.BACKUP()
+        elif sys.argv[1] == "restart":
+            _daemon.quit()
+            time.sleep(0.5)
+            _daemon.stop()
+            time.sleep(0.5)
+            _daemon.start()
     else:
-        print("Usage: start | stop | backup")
+        print("Usage: start | stop | backup | restart")
 
 
 if __name__ == "__main__":
