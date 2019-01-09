@@ -94,7 +94,7 @@ class Daemon:
 
         if pid:
             try:
-                os.kill(self.pid_file, 0)  # Checks if a process is running under the pid
+                os.kill(pid, 0)  # Checks if a process is running under the pid
             except OSError:
                 self.__sys_exit__("pidfile {} already exists. Daemon already running!\n".format(self.pid_file))
             finally:
